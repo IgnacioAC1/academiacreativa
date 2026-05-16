@@ -1,10 +1,16 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { getSession, clearSession, homeFor } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
+import { homeFor } from "@/lib/auth";
 
 const SiteHeader = () => {
-  const session = getSession();
+  const { profile, role, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/85 backdrop-blur">
@@ -15,23 +21,36 @@ const SiteHeader = () => {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          <NavLink to="/courses" className={({ isActive }) => `font-medium font-sans transition-smooth text-base ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+          <NavLink
+            to="/courses"
+            className={({ isActive }) =>
+              `font-medium font-sans transition-smooth text-base ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`
+            }
+          >
             Cursos
           </NavLink>
-          {session && (
-            <NavLink to={homeFor(session.role)} className={({ isActive }) => `text-sm font-medium font-sans transition-smooth ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+          {role && (
+            <NavLink
+              to={homeFor(role)}
+              className={({ isActive }) =>
+                `text-sm font-medium font-sans transition-smooth ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`
+              }
+            >
               Mi panel
             </NavLink>
           )}
         </nav>
 
         <div className="flex items-center gap-3">
-          {session ? (
+          {role ? (
             <>
               <span className="hidden text-sm text-muted-foreground sm:inline">
-                Hola, <span className="font-medium font-sans text-foreground">{session.name}</span>
+                Hola,{" "}
+                <span className="font-medium font-sans text-foreground">
+                  {profile?.full_name ?? "Usuario"}
+                </span>
               </span>
-              <Button variant="ghost" size="sm" onClick={() => { clearSession(); navigate("/"); }}>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 Salir
               </Button>
             </>

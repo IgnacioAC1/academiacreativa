@@ -3,21 +3,21 @@ import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { courses } from "@/data/mockData";
-import { getSession } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { PlayCircle, Clock, BookOpen } from "lucide-react";
 
 const CoursePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { role } = useAuth();
   const course = courses.find((c) => c.id === id);
   if (!course) return <div className="container py-20">Curso no encontrado.</div>;
 
   const totalLessons = course.modules.reduce((s, m) => s + m.lessons.length, 0);
 
   const buy = () => {
-    const s = getSession();
-    if (!s) { navigate("/login"); return; }
+    if (!role) { navigate("/login"); return; }
     toast.success("¡Curso adquirido! (demo)");
     navigate("/student");
   };

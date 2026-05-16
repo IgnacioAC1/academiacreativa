@@ -1,26 +1,27 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { courses as seedCourses, type Course } from "@/data/mockData";
-import { getSession } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 import { Plus, Pencil, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import AdminDashboard from "@/components/AdminDashboard";
 import EventsManager from "@/components/EventsManager";
+import UserRoleManager from "@/components/admin/UserRoleManager";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 type Props = { scope: "admin" | "instructor" };
 
-const CoursesAdminList = ({ scope }: Props) => {
-  const session = getSession();
-  if (!session) return <Navigate to="/login" replace />;
-  if (scope === "admin" && session.role !== "admin") return <Navigate to="/login" replace />;
-  if (scope === "instructor" && session.role !== "instructor") return <Navigate to="/login" replace />;
-
+const CoursesAdminListInner = ({ scope }: Props) => {
+  const { profile } = useAuth();
   const [list, setList] = useState<Course[]>(seedCourses);
 
-  const visible = scope === "admin" ? list : list.filter((c) => c.instructorId === session.userId);
+  const visible =
+    scope === "admin"
+      ? list
+      : list.filter((c) => c.instructorId === profile?.id);
 
   const togglePublish = (id: string) => {
     setList((prev) => prev.map((c) => (c.id === id ? { ...c, published: !c.published } : c)));
@@ -33,13 +34,15 @@ const CoursesAdminList = ({ scope }: Props) => {
       id,
       title: "Nuevo curso sin título",
       category: "Diseño",
-      instructor: session.name,
-      instructorId: session.userId,
+      instructor: profile?.full_name ?? "Instructor",
+      instructorId: profile?.id ?? "",
       price: 97,
       image: list[0].image,
       description: "Describe tu curso...",
       published: false,
-      modules: [{ id: "m1", title: "Módulo 1", lessons: [{ id: "m1-l0", title: "Lección 1", duration: "5:00" }] }],
+      modules: [
+        { id: "m1", title: "Módulo 1", lessons: [{ id: "m1-l0", title: "Lección 1", duration: "5:00" }] },
+      ],
     };
     setList((prev) => [fresh, ...prev]);
     toast.success("Curso creado");
@@ -51,8 +54,11 @@ const CoursesAdminList = ({ scope }: Props) => {
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <main className="container py-12">
-        <div className="mb-6"><BackButton /></div>
+        <div className="mb-6">
+          <BackButton />
+        </div>
         {scope === "admin" && <AdminDashboard />}
+
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm text-muted-foreground capitalize">{scope}</p>
@@ -91,11 +97,15 @@ const CoursesAdminList = ({ scope }: Props) => {
                   </td>
                   <td className="hidden px-5 py-3 text-muted-foreground md:table-cell">{c.category}</td>
                   <td className="hidden px-5 py-3 text-muted-foreground lg:table-cell">{c.instructor}</td>
+                  <td className="px-5 py-3">{c.price === 0 ? "Gratis" : `${c.price} €`}</td>
                   <td className="px-5 py-3">
-                    {c.price === 97 ? "​" : `${c.price} €`}
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium font-sans ${c.published ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground"}`}>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium font-sans ${
+                        c.published
+                          ? "bg-accent/15 text-accent"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
                       {c.published ? "Publicado" : "Borrador"}
                     </span>
                   </td>
@@ -105,7 +115,9 @@ const CoursesAdminList = ({ scope }: Props) => {
                         {c.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                       <Button asChild variant="ghost" size="sm">
-                        <Link to={`${editPath}/${c.id}`}><Pencil className="h-4 w-4" /></Link>
+                        <Link to={`${editPath}/${c.id}`}>
+                          <Pencil className="h-4 w-4" />
+                        </Link>
                       </Button>
                     </div>
                   </td>
@@ -114,10 +126,22 @@ const CoursesAdminList = ({ scope }: Props) => {
             </tbody>
           </table>
         </div>
-        {scope === "admin" && <EventsManager />}
+
+        {scope === "admin" && (
+          <>
+            <EventsManager />
+            <UserRoleManager />
+          </>
+        )}
       </main>
     </div>
   );
 };
+
+const CoursesAdminList = ({ scope }: Props) => (
+  <ProtectedRoute role={scope === "admin" ? "admin" : "instructor"}>
+    <CoursesAdminListInner scope={scope} />
+  </ProtectedRoute>
+);
 
 export default CoursesAdminList;

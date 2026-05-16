@@ -1,4 +1,4 @@
-import { useParams, Navigate, Link } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import { useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
@@ -7,22 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { courses, type Course } from "@/data/mockData";
-import { getSession } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
 type Props = { scope: "admin" | "instructor" };
 
-const CourseEditor = ({ scope }: Props) => {
+const CourseEditorInner = ({ scope }: Props) => {
   const { id } = useParams();
-  const session = getSession();
-  if (!session) return <Navigate to="/login" replace />;
+  const { profile } = useAuth();
 
   const original = courses.find((c) => c.id === id);
   const [course, setCourse] = useState<Course | undefined>(original);
 
   if (!course) return <div className="container py-20">Curso no encontrado.</div>;
-  if (scope === "instructor" && course.instructorId !== session.userId)
+  if (scope === "instructor" && course.instructorId !== profile?.id)
     return <Navigate to="/instructor" replace />;
 
   const update = (patch: Partial<Course>) => setCourse({ ...course, ...patch });
@@ -173,5 +173,11 @@ const CourseEditor = ({ scope }: Props) => {
     </div>
   );
 };
+
+const CourseEditor = ({ scope }: Props) => (
+  <ProtectedRoute role={scope === "admin" ? "admin" : "instructor"}>
+    <CourseEditorInner scope={scope} />
+  </ProtectedRoute>
+);
 
 export default CourseEditor;

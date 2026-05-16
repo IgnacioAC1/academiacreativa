@@ -1,21 +1,22 @@
-import { useParams, Navigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
 import { courses } from "@/data/mockData";
-import { getSession } from "@/lib/auth";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { Check, Play, Clock } from "lucide-react";
 
-const CourseViewer = () => {
+const CourseViewerInner = () => {
   const { id } = useParams();
-  const session = getSession();
-  if (!session || session.role !== "student") return <Navigate to="/login" replace />;
-
   const course = courses.find((c) => c.id === id);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
-  const [activeId, setActiveId] = useState<string>(course?.modules[0]?.lessons[0]?.id ?? "");
+  const [activeId, setActiveId] = useState<string>(
+    course?.modules[0]?.lessons[0]?.id ?? ""
+  );
 
-  if (!course) return <div className="container py-20">Curso no encontrado.</div>;
+  if (!course) {
+    return <div className="container py-20">Curso no encontrado.</div>;
+  }
 
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const active = allLessons.find((l) => l.id === activeId) ?? allLessons[0];
@@ -82,7 +83,11 @@ const CourseViewer = () => {
                             isActive ? "bg-secondary font-medium font-sans" : "hover:bg-secondary/60"
                           }`}
                         >
-                          <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${done ? "border-accent bg-accent text-accent-foreground" : "border-border"}`}>
+                          <span
+                            className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
+                              done ? "border-accent bg-accent text-accent-foreground" : "border-border"
+                            }`}
+                          >
                             {done && <Check className="h-3 w-3" />}
                           </span>
                           <span className="flex-1 truncate">{l.title}</span>
@@ -100,5 +105,11 @@ const CourseViewer = () => {
     </div>
   );
 };
+
+const CourseViewer = () => (
+  <ProtectedRoute role="student">
+    <CourseViewerInner />
+  </ProtectedRoute>
+);
 
 export default CourseViewer;
