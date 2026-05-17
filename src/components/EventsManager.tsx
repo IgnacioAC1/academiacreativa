@@ -193,7 +193,7 @@ const EventsManager = () => {
                     <Button variant="ghost" size="sm" onClick={() => openEdit(e)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => remove(e.id)}>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => remove(e.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
