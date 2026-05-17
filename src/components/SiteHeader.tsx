@@ -61,15 +61,15 @@ const SiteHeader = () => {
           {role ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                  <Avatar className="h-8 w-8">
+                <button className="group flex items-center gap-2 rounded-full border border-primary/50 py-1 pl-1 pr-4 transition-all duration-200 hover:border-primary hover:bg-primary hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  <Avatar className="h-6 w-6">
                     <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.full_name ?? "Usuario"} />
-                    <AvatarFallback className="text-xs font-semibold font-sans">
+                    <AvatarFallback className="bg-primary/15 text-xs font-semibold font-sans text-primary transition-colors duration-200 group-hover:bg-white/20 group-hover:text-white">
                       {(profile?.full_name ?? profile?.email ?? "?")
                         .split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden text-sm font-medium font-sans sm:inline">
+                  <span className="hidden text-sm font-semibold font-sans text-primary transition-colors duration-200 group-hover:text-primary-foreground sm:inline">
                     {profile?.full_name ?? "Usuario"}
                   </span>
                 </button>
