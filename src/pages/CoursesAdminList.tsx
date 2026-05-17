@@ -4,9 +4,9 @@ import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import type { Course } from "@/data/mockData";
-import { fetchAllCourses, createCourse, updateCoursePublished } from "@/lib/courseApi";
+import { fetchAllCourses, createCourse, updateCoursePublished, deleteCourse } from "@/lib/courseApi";
 import { useAuth } from "@/context/AuthContext";
-import { Plus, Pencil, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Eye, EyeOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import AdminDashboard from "@/components/AdminDashboard";
 import EventsManager from "@/components/EventsManager";
@@ -33,6 +33,13 @@ const CoursesAdminListInner = ({ scope }: Props) => {
     scope === "admin"
       ? list
       : list.filter((c) => c.instructorId === profile?.id);
+
+  const handleDelete = async (id: string) => {
+    const { error } = await deleteCourse(id);
+    if (error) { toast.error("Error al eliminar el curso"); return; }
+    toast.success("Curso eliminado");
+    setList((prev) => prev.filter((c) => c.id !== id));
+  };
 
   const togglePublish = async (id: string, current: boolean) => {
     await updateCoursePublished(id, !current);
@@ -138,6 +145,16 @@ const CoursesAdminListInner = ({ scope }: Props) => {
                             <Pencil className="h-4 w-4" />
                           </Link>
                         </Button>
+                        {scope === "admin" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(c.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

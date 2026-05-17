@@ -84,6 +84,11 @@ export async function fetchCourse(id: string): Promise<Course | null> {
   );
 }
 
+export async function deleteCourse(id: string): Promise<{ error: string | null }> {
+  const { error } = await supabase.from("courses").delete().eq("id", id);
+  return { error: error ? error.message : null };
+}
+
 export async function updateCoursePublished(id: string, published: boolean): Promise<void> {
   await supabase.from("courses").update({ published }).eq("id", id);
 }
