@@ -16,6 +16,7 @@ import {
 import type { Course } from "@/data/mockData";
 import { fetchCourse, saveCourse, updateCoursePublished } from "@/lib/courseApi";
 import { fetchCategories, type Category } from "@/lib/categoryApi";
+import CategoryManagerDialog from "@/components/admin/CategoryManagerDialog";
 import { uploadImage, courseImagePath } from "@/lib/storage";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -185,14 +186,17 @@ const CourseEditorInner = ({ scope }: Props) => {
             </div>
             <div className="grid gap-2">
               <Label>Categoría</Label>
-              <Select value={course.category} onValueChange={(v) => update({ category: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Select value={course.category} onValueChange={(v) => update({ category: v })}>
+                  <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <CategoryManagerDialog onChanged={() => fetchCategories().then(setCategories)} />
+              </div>
             </div>
           </div>
           <div className="grid gap-2">
