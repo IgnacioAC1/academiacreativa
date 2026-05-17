@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import SiteHeader from "@/components/SiteHeader";
 import CourseCard from "@/components/CourseCard";
@@ -5,12 +6,17 @@ import ValueProps from "@/components/ValueProps";
 import EventsRow from "@/components/EventsRow";
 import FAQ from "@/components/FAQ";
 import { Button } from "@/components/ui/button";
-import { courses } from "@/data/mockData";
+import { fetchPublishedCourses } from "@/lib/courseApi";
+import type { Course } from "@/data/mockData";
 import hero from "@/assets/hero.jpg";
-import { ChevronRight } from "lucide-react";
 
 const Index = () => {
-  const visible = courses.filter((c) => c.published);
+  const [courses, setCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    fetchPublishedCourses().then(setCourses);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
@@ -42,11 +48,11 @@ const Index = () => {
         <div className="mb-10 flex items-end justify-between">
           <div>
             <h2 className="text-3xl font-semibold md:text-4xl font-sans">Cursos destacados</h2>
-            <p className="mt-2 font-medium text-secondary-foreground">​Impulsa tu carrera con las habilidades más demandadas del sector.</p>
+            <p className="mt-2 font-medium text-secondary-foreground">Impulsa tu carrera con las habilidades más demandadas del sector.</p>
           </div>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.slice(0, 3).map((c) => (
+          {courses.slice(0, 3).map((c) => (
             <CourseCard key={c.id} course={c} hidePrice />
           ))}
         </div>

@@ -10,6 +10,8 @@ type AuthContextValue = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  updateProfile: (patch: Partial<Pick<Profile, "full_name" | "bio" | "avatar_url">>) => Promise<{ error: string | null }>;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -55,6 +57,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await supabase.auth.signOut();
   };
 
+  const refreshProfile = async () => {
+    if (user) await fetchProfile(user.id);
+  };
+
+  const updateProfile = async (patch: Partial<Pick<Profile, "full_name" | "bio" | "avatar_url">>) => {
+    if (!user) return { error: "No autenticado" };
+    const { error } = await supabase
+      .from("profiles")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+    if (!error) await fetchProfile(user.id);
+    return { error: error ? error.message : null };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -64,6 +80,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loading,
         signIn,
         signOut,
+        updateProfile,
+        refreshProfile,
       }}
     >
       {children}

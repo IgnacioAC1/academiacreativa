@@ -15,6 +15,7 @@ import StudentDashboard from "./pages/StudentDashboard.tsx";
 import CourseViewer from "./pages/CourseViewer.tsx";
 import CoursesAdminList from "./pages/CoursesAdminList.tsx";
 import CourseEditor from "./pages/CourseEditor.tsx";
+import Profile from "./pages/Profile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/admin/course/:id" element={<CourseEditor scope="admin" />} />
             <Route path="/instructor" element={<CoursesAdminList scope="instructor" />} />
             <Route path="/instructor/course/:id" element={<CourseEditor scope="instructor" />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

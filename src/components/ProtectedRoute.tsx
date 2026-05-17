@@ -4,7 +4,8 @@ import type { Role } from "@/lib/auth";
 
 type Props = {
   children: React.ReactNode;
-  role: Role;
+  /** Rol requerido. Si es null, cualquier usuario autenticado puede acceder. */
+  role: Role | null;
 };
 
 const ProtectedRoute = ({ children, role }: Props) => {
@@ -19,7 +20,7 @@ const ProtectedRoute = ({ children, role }: Props) => {
   }
 
   if (!userRole) return <Navigate to="/login" replace />;
-  if (userRole !== role) return <Navigate to="/" replace />;
+  if (role !== null && userRole !== role) return <Navigate to="/" replace />;
 
   return <>{children}</>;
 };

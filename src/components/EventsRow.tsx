@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import EventCard from "@/components/EventCard";
-import { events } from "@/data/events";
+import { fetchEvents } from "@/lib/eventApi";
+import type { Event } from "@/data/events";
 import { cn } from "@/lib/utils";
 import {
   Carousel,
@@ -13,6 +14,11 @@ const EventsRow = () => {
   const [api, setApi] = useState<CarouselApi>();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [snaps, setSnaps] = useState<number[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+    fetchEvents().then(setEvents);
+  }, []);
 
   useEffect(() => {
     if (!api) return;

@@ -1,29 +1,63 @@
-import { useParams, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { courses, type Course } from "@/data/mockData";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Course } from "@/data/mockData";
+import { fetchCourse, saveCourse, updateCoursePublished } from "@/lib/courseApi";
+import { uploadImage, courseImagePath } from "@/lib/storage";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
+
+const CATEGORIES = ["Branding", "Ilustración", "Motion", "Diseño", "Producto", "Fotografía"];
 
 type Props = { scope: "admin" | "instructor" };
 
 const CourseEditorInner = ({ scope }: Props) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { profile } = useAuth();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const original = courses.find((c) => c.id === id);
-  const [course, setCourse] = useState<Course | undefined>(original);
+  useEffect(() => {
+    if (!id) return;
+    fetchCourse(id).then((c) => {
+      if (!c) { navigate(scope === "admin" ? "/admin" : "/instructor"); return; }
+      if (scope === "instructor" && c.instructorId !== profile?.id) {
+        navigate("/instructor");
+        return;
+      }
+      setCourse(c);
+      setLoading(false);
+    });
+  }, [id, profile?.id]);
 
-  if (!course) return <div className="container py-20">Curso no encontrado.</div>;
-  if (scope === "instructor" && course.instructorId !== profile?.id)
-    return <Navigate to="/instructor" replace />;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <div className="flex justify-center py-40">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) return null;
 
   const update = (patch: Partial<Course>) => setCourse({ ...course, ...patch });
 
@@ -32,7 +66,13 @@ const CourseEditorInner = ({ scope }: Props) => {
       ...course,
       modules: course.modules.map((m) =>
         m.id === mid
-          ? { ...m, lessons: [...m.lessons, { id: `${mid}-l${m.lessons.length}-${Date.now()}`, title: "Nueva lección", duration: "5:00" }] }
+          ? {
+              ...m,
+              lessons: [
+                ...m.lessons,
+                { id: `${mid}-l${m.lessons.length}-${Date.now()}`, title: "Nueva lección", duration: "5:00" },
+              ],
+            }
           : m
       ),
     });
@@ -59,10 +99,13 @@ const CourseEditorInner = ({ scope }: Props) => {
   };
 
   const addModule = () => {
-    const mid = `m${course.modules.length + 1}-${Date.now()}`;
+    const mid = crypto.randomUUID();
     setCourse({
       ...course,
-      modules: [...course.modules, { id: mid, title: `Módulo ${course.modules.length + 1}`, lessons: [] }],
+      modules: [
+        ...course.modules,
+        { id: mid, title: `Módulo ${course.modules.length + 1}`, lessons: [] },
+      ],
     });
   };
 
@@ -79,7 +122,30 @@ const CourseEditorInner = ({ scope }: Props) => {
     setCourse({ ...course, modules: course.modules.map((m) => (m.id === mid ? { ...m, title } : m)) });
   };
 
-  const save = () => toast.success("Cambios guardados (demo)");
+  const handleCoverUpload = async (file: File) => {
+    try {
+      const path = courseImagePath(course.id, file.name);
+      const url = await uploadImage("courses", path, file);
+      update({ image: url });
+      toast.success("Imagen subida correctamente");
+    } catch {
+      toast.error("Error al subir la imagen");
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await saveCourse(course);
+    setSaving(false);
+    if (error) toast.error(`Error: ${error}`);
+    else toast.success("Cambios guardados");
+  };
+
+  const handleTogglePublish = async () => {
+    await updateCoursePublished(course.id, !course.published);
+    update({ published: !course.published });
+    toast.success(course.published ? "Curso despublicado" : "Curso publicado");
+  };
 
   const backHref = scope === "admin" ? "/admin" : "/instructor";
 
@@ -91,10 +157,12 @@ const CourseEditorInner = ({ scope }: Props) => {
         <div className="mt-2 mb-8 flex flex-wrap items-end justify-between gap-4">
           <h1 className="text-4xl font-semibold font-sans">Editar curso</h1>
           <div className="flex gap-2">
-            <Button variant="outline" className="rounded-full" onClick={() => update({ published: !course.published })}>
+            <Button variant="outline" className="rounded-full" onClick={handleTogglePublish}>
               {course.published ? "Despublicar" : "Publicar"}
             </Button>
-            <Button className="rounded-full" onClick={save}>Guardar</Button>
+            <Button className="rounded-full" onClick={handleSave} disabled={saving}>
+              {saving ? "Guardando..." : "Guardar"}
+            </Button>
           </div>
         </div>
 
@@ -107,9 +175,41 @@ const CourseEditorInner = ({ scope }: Props) => {
             <Label htmlFor="desc">Descripción</Label>
             <Textarea id="desc" rows={4} value={course.description} onChange={(e) => update({ description: e.target.value })} />
           </div>
-          <div className="grid gap-2 sm:max-w-xs">
-            <Label htmlFor="price">Precio (€)</Label>
-            <Input id="price" type="number" value={course.price} onChange={(e) => update({ price: Number(e.target.value) })} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="price">Precio (€)</Label>
+              <Input id="price" type="number" value={course.price} onChange={(e) => update({ price: Number(e.target.value) })} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Categoría</Label>
+              <Select value={course.category} onValueChange={(v) => update({ category: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Imagen de portada</Label>
+            {course.image && (
+              <img src={course.image} alt="Portada" className="h-40 w-full max-w-sm rounded-xl object-cover" />
+            )}
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:bg-secondary/40 sm:max-w-sm">
+              <Upload className="h-4 w-4" />
+              Subir imagen (JPEG / PNG / WebP, máx. 5 MB)
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleCoverUpload(file);
+                }}
+              />
+            </label>
           </div>
         </section>
 
@@ -126,13 +226,21 @@ const CourseEditorInner = ({ scope }: Props) => {
               <div key={m.id} className="rounded-xl border border-border bg-card">
                 <div className="flex items-center gap-3 border-b border-border bg-secondary/40 px-4 py-3">
                   <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Módulo {i + 1}</span>
-                  <Input value={m.title} onChange={(e) => renameModule(m.id, e.target.value)} className="border-0 bg-transparent shadow-none focus-visible:ring-0" />
+                  <Input
+                    value={m.title}
+                    onChange={(e) => renameModule(m.id, e.target.value)}
+                    className="border-0 bg-transparent shadow-none focus-visible:ring-0"
+                  />
                 </div>
                 <ul className="divide-y divide-border">
                   {m.lessons.map((l) => (
                     <li key={l.id} className="px-4 py-2">
                       <div className="flex items-center gap-2">
-                        <Input value={l.title} onChange={(e) => renameLesson(m.id, l.id, e.target.value)} className="border-0 bg-transparent shadow-none focus-visible:ring-0" />
+                        <Input
+                          value={l.title}
+                          onChange={(e) => renameLesson(m.id, l.id, e.target.value)}
+                          className="border-0 bg-transparent shadow-none focus-visible:ring-0"
+                        />
                         <span className="text-xs text-muted-foreground">{l.duration}</span>
                         <Button variant="ghost" size="sm" onClick={() => removeLesson(m.id, l.id)}>
                           <Trash2 className="h-4 w-4" />

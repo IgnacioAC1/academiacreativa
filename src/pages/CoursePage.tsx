@@ -1,24 +1,52 @@
+import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
-import { courses } from "@/data/mockData";
 import { useAuth } from "@/context/AuthContext";
+import { fetchCourse, enrollStudent } from "@/lib/courseApi";
+import type { Course } from "@/data/mockData";
 import { toast } from "sonner";
 import { PlayCircle, Clock, BookOpen } from "lucide-react";
 
 const CoursePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { role } = useAuth();
-  const course = courses.find((c) => c.id === id);
+  const { user, role } = useAuth();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [buying, setBuying] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchCourse(id).then((c) => {
+      setCourse(c);
+      setLoading(false);
+    });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <div className="flex justify-center py-40">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
   if (!course) return <div className="container py-20">Curso no encontrado.</div>;
 
   const totalLessons = course.modules.reduce((s, m) => s + m.lessons.length, 0);
 
-  const buy = () => {
-    if (!role) { navigate("/login"); return; }
-    toast.success("¡Curso adquirido! (demo)");
+  const buy = async () => {
+    if (!role || !user) { navigate("/login"); return; }
+    setBuying(true);
+    const { error } = await enrollStudent(user.id, course.id);
+    setBuying(false);
+    if (error) { toast.error("Error al matricularse"); return; }
+    toast.success("¡Te has matriculado correctamente!");
     navigate("/student");
   };
 
@@ -72,7 +100,9 @@ const CoursePage = () => {
           <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
             <div className="mb-1 text-sm text-muted-foreground">Acceso de por vida</div>
             <div className="mb-6 text-4xl font-semibold font-sans">{course.price} €</div>
-            <Button onClick={buy} size="lg" className="w-full rounded-full">Comprar curso</Button>
+            <Button onClick={buy} size="lg" className="w-full rounded-full" disabled={buying}>
+              {buying ? "Procesando..." : "Comprar curso"}
+            </Button>
             <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> {course.modules.length} módulos · {totalLessons} lecciones</li>
               <li className="flex items-center gap-2"><Clock className="h-4 w-4" /> Avanza a tu ritmo</li>

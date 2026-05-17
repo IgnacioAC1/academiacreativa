@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,39 +17,125 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { events as seedEvents, type Event } from "@/data/events";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { uploadImage, eventImagePath } from "@/lib/storage";
+import { Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
-const emptyEvent = (): Event => ({
-  id: `e${Date.now()}`,
+type EventRow = {
+  id: string;
+  title: string;
+  date: string;
+  date_label: string;
+  description: string;
+  image_url: string;
+  tag: "Gratis" | "En directo";
+  location: string;
+  host: string;
+};
+
+const emptyEvent = (): Omit<EventRow, "id"> => ({
   title: "Nuevo evento",
   date: new Date().toISOString().slice(0, 10),
-  dateLabel: "Próximamente",
+  date_label: "Próximamente",
   description: "Describe tu evento...",
-  image: seedEvents[0].image,
+  image_url: "",
   tag: "Gratis",
   location: "Online",
   host: "",
 });
 
 const EventsManager = () => {
-  const [list, setList] = useState<Event[]>(seedEvents);
-  const [editing, setEditing] = useState<Event | null>(null);
+  const [list, setList] = useState<EventRow[]>([]);
+  const [editing, setEditing] = useState<Partial<EventRow> | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const save = () => {
-    if (!editing) return;
-    setList((prev) => {
-      const exists = prev.some((e) => e.id === editing.id);
-      return exists ? prev.map((e) => (e.id === editing.id ? editing : e)) : [editing, ...prev];
-    });
-    toast.success("Evento guardado");
-    setEditing(null);
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .order("date", { ascending: true });
+    if (error) { toast.error("Error al cargar eventos"); return; }
+    setList(
+      (data ?? []).map((e) => ({
+        id: e.id,
+        title: e.title,
+        date: (e.date as string).slice(0, 10),
+        date_label: e.date_label ?? "",
+        description: e.description ?? "",
+        image_url: e.image_url ?? "",
+        tag: e.tag as EventRow["tag"],
+        location: e.location ?? "",
+        host: e.host ?? "",
+      }))
+    );
   };
 
-  const remove = (id: string) => {
-    setList((prev) => prev.filter((e) => e.id !== id));
+  const openCreate = () => {
+    setIsNew(true);
+    setEditing(emptyEvent());
+  };
+
+  const openEdit = (e: EventRow) => {
+    setIsNew(false);
+    setEditing({ ...e });
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!editing) return;
+    setUploading(true);
+    try {
+      const tempId = editing.id ?? `tmp-${Date.now()}`;
+      const path = eventImagePath(tempId, file.name);
+      const url = await uploadImage("events", path, file);
+      setEditing({ ...editing, image_url: url });
+      toast.success("Imagen subida");
+    } catch {
+      toast.error("Error al subir la imagen");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const save = async () => {
+    if (!editing) return;
+    setSaving(true);
+    const payload = {
+      title: editing.title ?? "",
+      date: editing.date ?? new Date().toISOString(),
+      date_label: editing.date_label ?? "",
+      description: editing.description ?? "",
+      image_url: editing.image_url ?? "",
+      tag: editing.tag ?? "Gratis",
+      location: editing.location ?? "",
+      host: editing.host ?? "",
+    };
+
+    let error;
+    if (isNew) {
+      ({ error } = await supabase.from("events").insert(payload));
+    } else {
+      ({ error } = await supabase.from("events").update(payload).eq("id", editing.id!));
+    }
+
+    setSaving(false);
+    if (error) { toast.error("Error al guardar el evento"); return; }
+    toast.success(isNew ? "Evento creado" : "Evento guardado");
+    setEditing(null);
+    loadEvents();
+  };
+
+  const remove = async (id: string) => {
+    const { error } = await supabase.from("events").delete().eq("id", id);
+    if (error) { toast.error("Error al eliminar el evento"); return; }
     toast.success("Evento eliminado");
+    setList((prev) => prev.filter((e) => e.id !== id));
   };
 
   return (
@@ -60,7 +146,7 @@ const EventsManager = () => {
           <h2 className="text-4xl font-semibold font-sans">Todos los eventos</h2>
           <p className="mt-2 text-muted-foreground">Gestiona los eventos de la plataforma.</p>
         </div>
-        <Button onClick={() => setEditing(emptyEvent())} className="rounded-full" size="lg">
+        <Button onClick={openCreate} className="rounded-full" size="lg">
           <Plus className="mr-2 h-4 w-4" /> Crear evento
         </Button>
       </div>
@@ -81,11 +167,15 @@ const EventsManager = () => {
               <tr key={e.id} className="transition-smooth hover:bg-secondary/30">
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
-                    <img src={e.image} alt="" className="h-10 w-14 rounded object-cover" />
+                    {e.image_url ? (
+                      <img src={e.image_url} alt="" className="h-10 w-14 rounded object-cover" />
+                    ) : (
+                      <div className="h-10 w-14 rounded bg-secondary" />
+                    )}
                     <span className="font-medium font-sans">{e.title}</span>
                   </div>
                 </td>
-                <td className="hidden px-5 py-3 text-muted-foreground md:table-cell">{e.dateLabel}</td>
+                <td className="hidden px-5 py-3 text-muted-foreground md:table-cell">{e.date_label}</td>
                 <td className="hidden px-5 py-3 text-muted-foreground lg:table-cell">{e.location}</td>
                 <td className="px-5 py-3">
                   <span
@@ -100,7 +190,7 @@ const EventsManager = () => {
                 </td>
                 <td className="px-5 py-3">
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(e)}>
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(e)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => remove(e.id)}>
@@ -117,81 +207,83 @@ const EventsManager = () => {
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-sans">Editar evento</DialogTitle>
+            <DialogTitle className="font-sans">{isNew ? "Crear evento" : "Editar evento"}</DialogTitle>
           </DialogHeader>
           {editing && (
             <div className="grid gap-4">
               <div className="grid gap-2">
                 <Label>Imagen del evento</Label>
                 <div className="flex items-center gap-3">
-                  <img
-                    src={editing.image}
-                    alt=""
-                    className="h-16 w-24 rounded-md object-cover border border-border"
-                  />
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () =>
-                        setEditing({ ...editing, image: String(reader.result) });
-                      reader.readAsDataURL(file);
-                    }}
-                  />
+                  {editing.image_url ? (
+                    <img src={editing.image_url} alt="" className="h-16 w-24 rounded-md object-cover border border-border" />
+                  ) : (
+                    <div className="h-16 w-24 rounded-md bg-secondary border border-border" />
+                  )}
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary/40">
+                    <Upload className="h-4 w-4" />
+                    {uploading ? "Subiendo..." : "Subir imagen"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      disabled={uploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(file);
+                      }}
+                    />
+                  </label>
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="title">Título</Label>
+                <Label htmlFor="ev-title">Título</Label>
                 <Input
-                  id="title"
-                  value={editing.title}
+                  id="ev-title"
+                  value={editing.title ?? ""}
                   onChange={(e) => setEditing({ ...editing, title: e.target.value })}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="desc">Descripción</Label>
+                <Label htmlFor="ev-desc">Descripción</Label>
                 <Textarea
-                  id="desc"
-                  value={editing.description}
+                  id="ev-desc"
+                  value={editing.description ?? ""}
                   onChange={(e) => setEditing({ ...editing, description: e.target.value })}
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="date">Fecha</Label>
+                  <Label htmlFor="ev-date">Fecha</Label>
                   <Input
-                    id="date"
+                    id="ev-date"
                     type="date"
-                    value={editing.date}
+                    value={editing.date ?? ""}
                     onChange={(e) => setEditing({ ...editing, date: e.target.value })}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="dateLabel">Etiqueta de fecha</Label>
+                  <Label htmlFor="ev-dateLabel">Etiqueta de fecha</Label>
                   <Input
-                    id="dateLabel"
-                    value={editing.dateLabel}
-                    onChange={(e) => setEditing({ ...editing, dateLabel: e.target.value })}
+                    id="ev-dateLabel"
+                    value={editing.date_label ?? ""}
+                    onChange={(e) => setEditing({ ...editing, date_label: e.target.value })}
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="location">Ubicación</Label>
+                  <Label htmlFor="ev-location">Ubicación</Label>
                   <Input
-                    id="location"
-                    value={editing.location}
+                    id="ev-location"
+                    value={editing.location ?? ""}
                     onChange={(e) => setEditing({ ...editing, location: e.target.value })}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="host">Host</Label>
+                  <Label htmlFor="ev-host">Host</Label>
                   <Input
-                    id="host"
-                    value={editing.host}
+                    id="ev-host"
+                    value={editing.host ?? ""}
                     onChange={(e) => setEditing({ ...editing, host: e.target.value })}
                   />
                 </div>
@@ -199,8 +291,8 @@ const EventsManager = () => {
               <div className="grid gap-2">
                 <Label>Tipo</Label>
                 <Select
-                  value={editing.tag}
-                  onValueChange={(v) => setEditing({ ...editing, tag: v as Event["tag"] })}
+                  value={editing.tag ?? "Gratis"}
+                  onValueChange={(v) => setEditing({ ...editing, tag: v as EventRow["tag"] })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -214,10 +306,10 @@ const EventsManager = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>
-              Cancelar
+            <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
+            <Button onClick={save} disabled={saving || uploading}>
+              {saving ? "Guardando..." : "Guardar"}
             </Button>
-            <Button onClick={save}>Guardar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

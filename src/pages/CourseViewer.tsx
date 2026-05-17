@@ -1,18 +1,44 @@
-import { useParams, Link } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
-import { courses } from "@/data/mockData";
+import { fetchCourse, fetchLessonProgress, toggleLessonComplete } from "@/lib/courseApi";
+import type { Course } from "@/data/mockData";
+import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { Check, Play, Clock } from "lucide-react";
 
 const CourseViewerInner = () => {
   const { id } = useParams();
-  const course = courses.find((c) => c.id === id);
+  const { user } = useAuth();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
-  const [activeId, setActiveId] = useState<string>(
-    course?.modules[0]?.lessons[0]?.id ?? ""
-  );
+  const [activeId, setActiveId] = useState<string>("");
+
+  useEffect(() => {
+    if (!id) return;
+    Promise.all([
+      fetchCourse(id),
+      user ? fetchLessonProgress(user.id) : Promise.resolve(new Set<string>()),
+    ]).then(([c, progress]) => {
+      setCourse(c);
+      setCompleted(progress);
+      if (c) setActiveId(c.modules[0]?.lessons[0]?.id ?? "");
+      setLoading(false);
+    });
+  }, [id, user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <div className="flex justify-center py-40">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
 
   if (!course) {
     return <div className="container py-20">Curso no encontrado.</div>;
@@ -21,12 +47,14 @@ const CourseViewerInner = () => {
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const active = allLessons.find((l) => l.id === activeId) ?? allLessons[0];
 
-  const toggle = (lid: string) => {
+  const toggle = async (lid: string) => {
+    const nowCompleted = !completed.has(lid);
     setCompleted((prev) => {
       const next = new Set(prev);
-      next.has(lid) ? next.delete(lid) : next.add(lid);
+      nowCompleted ? next.add(lid) : next.delete(lid);
       return next;
     });
+    if (user) await toggleLessonComplete(user.id, lid, nowCompleted);
   };
 
   return (
@@ -36,30 +64,41 @@ const CourseViewerInner = () => {
         <main className="space-y-6">
           <BackButton fallback="/student" label="Mi panel" />
           <div className="aspect-video overflow-hidden rounded-2xl bg-foreground/95">
-            <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-background/80">
-              <div className="grid h-16 w-16 place-items-center rounded-full bg-background/10 backdrop-blur">
-                <Play className="ml-1 h-7 w-7 fill-current" />
+            {active?.video ? (
+              <video
+                key={active.id}
+                src={active.video}
+                controls
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-background/80">
+                <div className="grid h-16 w-16 place-items-center rounded-full bg-background/10 backdrop-blur">
+                  <Play className="ml-1 h-7 w-7 fill-current" />
+                </div>
+                <p className="text-sm">Sin vídeo asignado</p>
               </div>
-              <p className="text-sm">Reproductor de vídeo (demo)</p>
-            </div>
+            )}
           </div>
           <div>
             <p className="text-sm text-muted-foreground">{course.title}</p>
-            <h1 className="mt-1 text-3xl font-semibold font-sans">{active.title}</h1>
+            <h1 className="mt-1 text-3xl font-semibold font-sans">{active?.title}</h1>
             <p className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
-              <Clock className="h-3 w-3" /> {active.duration}
+              <Clock className="h-3 w-3" /> {active?.duration}
             </p>
-            <button
-              onClick={() => toggle(active.id)}
-              className={`mt-5 inline-flex items-center gap-2 rounded-full border px-5 py-2 text-sm font-medium font-sans transition-smooth ${
-                completed.has(active.id)
-                  ? "border-accent bg-accent text-accent-foreground"
-                  : "border-border hover:bg-secondary"
-              }`}
-            >
-              <Check className="h-4 w-4" />
-              {completed.has(active.id) ? "Lección completada" : "Marcar como completada"}
-            </button>
+            {active && (
+              <button
+                onClick={() => toggle(active.id)}
+                className={`mt-5 inline-flex items-center gap-2 rounded-full border px-5 py-2 text-sm font-medium font-sans transition-smooth ${
+                  completed.has(active.id)
+                    ? "border-accent bg-accent text-accent-foreground"
+                    : "border-border hover:bg-secondary"
+                }`}
+              >
+                <Check className="h-4 w-4" />
+                {completed.has(active.id) ? "Lección completada" : "Marcar como completada"}
+              </button>
+            )}
           </div>
         </main>
 
