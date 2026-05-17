@@ -85,12 +85,12 @@ const CategoryManagerDialog = ({ onChanged }: Props) => {
       <DialogTrigger asChild>
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="h-9 w-9 rounded-full p-0 text-muted-foreground hover:text-foreground"
-          title="Gestionar categorías"
+          className="rounded-full border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 gap-1.5"
         >
-          <Settings2 className="h-4 w-4" />
+          <Settings2 className="h-3.5 w-3.5" />
+          Gestionar
         </Button>
       </DialogTrigger>
 
