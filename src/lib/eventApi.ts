@@ -67,6 +67,39 @@ export async function reserveEvent(
   return { error: null };
 }
 
+export type EventLead = {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  acceptsMarketing: boolean;
+  createdAt: string;
+};
+
+export async function fetchEventLeads(): Promise<EventLead[]> {
+  const { data, error } = await supabase
+    .from("event_leads")
+    .select("*, events(title)")
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: row.id as string,
+    eventId: row.event_id as string,
+    eventTitle: (row.events as { title: string } | null)?.title ?? "Evento desconocido",
+    fullName: row.full_name as string,
+    email: row.email as string,
+    phone: (row.phone as string | null) ?? null,
+    acceptsMarketing: row.accepts_marketing as boolean,
+    createdAt: row.created_at as string,
+  }));
+}
+
+export async function deleteLead(id: string): Promise<void> {
+  await supabase.from("event_leads").delete().eq("id", id);
+}
+
 export type LeadData = {
   eventId: string;
   fullName: string;

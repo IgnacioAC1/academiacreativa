@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import AdminDashboard from "@/components/AdminDashboard";
 import EventsManager from "@/components/EventsManager";
 import UserRoleManager from "@/components/admin/UserRoleManager";
+import EventLeadsManager from "@/components/admin/EventLeadsManager";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 type Props = { scope: "admin" | "instructor" };
@@ -149,6 +150,7 @@ const CoursesAdminListInner = ({ scope }: Props) => {
         {scope === "admin" && (
           <>
             <EventsManager />
+            <EventLeadsManager />
             <UserRoleManager />
           </>
         )}
