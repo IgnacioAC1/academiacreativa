@@ -15,28 +15,31 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [pendingNav, setPendingNav] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Navega cuando el role esté disponible en el contexto
+  // Si el usuario ya está logueado al entrar a /login, redirige a su panel
   useEffect(() => {
-    if (pendingNav && !authLoading && role) {
+    if (!authLoading && role) {
       navigate(homeFor(role), { replace: true });
     }
-  }, [pendingNav, authLoading, role]);
+  }, [authLoading, role, navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setLoading(true);
-    const { error: err } = await signIn(email, password);
-    setLoading(false);
+    setSubmitting(true);
+    const { error: err, role: userRole } = await signIn(email, password);
+    setSubmitting(false);
     if (err) {
       setError("Email o contraseña incorrectos.");
       return;
     }
-    // Activa la espera: el useEffect navegará cuando role esté listo
-    setPendingNav(true);
+    if (userRole) {
+      navigate(homeFor(userRole), { replace: true });
+    } else {
+      // Sin role: redirige a home (no se debería dar si el perfil existe)
+      setError("No se pudo cargar el perfil. Contacta con un administrador.");
+    }
   };
 
   return (
@@ -84,8 +87,8 @@ const Login = () => {
                 </p>
               )}
 
-              <Button type="submit" className="w-full rounded-full" size="lg" disabled={loading}>
-                {loading ? "Entrando…" : "Entrar"}
+              <Button type="submit" className="w-full rounded-full" size="lg" disabled={submitting}>
+                {submitting ? "Entrando…" : "Entrar"}
               </Button>
             </form>
 
