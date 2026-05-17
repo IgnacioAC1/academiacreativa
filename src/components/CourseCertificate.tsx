@@ -1,25 +1,21 @@
 import { Document, Page, Text, View, StyleSheet, pdf, Font } from "@react-pdf/renderer";
 
-import playfair400 from "@fontsource/playfair-display/files/playfair-display-latin-400-normal.woff2?url";
-import playfair700 from "@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff2?url";
-import playfair400italic from "@fontsource/playfair-display/files/playfair-display-latin-400-italic.woff2?url";
-import lato300 from "@fontsource/lato/files/lato-latin-300-normal.woff2?url";
-import lato400 from "@fontsource/lato/files/lato-latin-400-normal.woff2?url";
+const base = window.location.origin;
 
 Font.register({
   family: "Playfair",
   fonts: [
-    { src: playfair400, fontWeight: 400 },
-    { src: playfair700, fontWeight: 700 },
-    { src: playfair400italic, fontWeight: 400, fontStyle: "italic" },
+    { src: `${base}/fonts/playfair-400.woff2`, fontWeight: 400 },
+    { src: `${base}/fonts/playfair-700.woff2`, fontWeight: 700 },
+    { src: `${base}/fonts/playfair-400-italic.woff2`, fontWeight: 400, fontStyle: "italic" },
   ],
 });
 
 Font.register({
   family: "Lato",
   fonts: [
-    { src: lato300, fontWeight: 300 },
-    { src: lato400, fontWeight: 400 },
+    { src: `${base}/fonts/lato-300.woff2`, fontWeight: 300 },
+    { src: `${base}/fonts/lato-400.woff2`, fontWeight: 400 },
   ],
 });
 
