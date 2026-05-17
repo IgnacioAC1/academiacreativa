@@ -3,23 +3,23 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 const faqs = [
   {
     q: "¿Cómo accedo a los cursos?",
-    a: "Tras la compra, tendrás acceso inmediato desde tu cuenta a todo el contenido del curso.",
+    a: "Para acceder a los cursos, es necesario crear una cuenta en Academia Creativa de forma gratuita. Una vez registrado, recibirás un correo electrónico de confirmación para verificar tu cuenta. Tras completar la matriculación en el curso de tu elección, tendrás acceso inmediato a todo el contenido desde tu panel de estudiante, donde podrás ver los vídeos, revisar los materiales y retomar cada lección cuando lo desees, sin ninguna restricción adicional.",
   },
   {
     q: "¿Los cursos tienen horario?",
-    a: "No. Puedes aprender a tu ritmo y acceder a los contenidos cuando quieras.",
+    a: "No, en absoluto. Todos nuestros cursos son 100% asíncronos, lo que significa que tú decides cuándo y cómo aprender. Puedes avanzar a tu ritmo, pausar cuando necesites y retomar el contenido en cualquier momento desde cualquier dispositivo.",
   },
   {
     q: "¿Cuánto duran los cursos?",
-    a: "Depende del curso, pero puedes completarlos a tu ritmo sin límite de tiempo.",
+    a: "La duración varía según el curso y el nivel de profundidad del temario, pero no existe ningún límite de tiempo para completarlos. Una vez matriculado, el acceso al contenido es indefinido, por lo que puedes tomarte el tiempo que necesites para absorber bien cada lección.",
   },
   {
     q: "¿Recibiré un certificado?",
-    a: "Sí, al completar el curso recibirás un certificado con tu nombre.",
+    a: "Sí. Al completar todas las lecciones del curso, recibirás un certificado digital a tu nombre que acredita la formación realizada. Podrás descargarlo y compartirlo en tu portfolio o perfil profesional.",
   },
   {
     q: "¿Necesito experiencia previa?",
-    a: "No necesariamente. Hay cursos para distintos niveles, desde iniciación hasta avanzado.",
+    a: "No necesariamente. En Academia Creativa encontrarás cursos pensados para distintos perfiles y niveles: desde quienes se inician en el diseño hasta profesionales que buscan especializarse o actualizar sus habilidades. Cada curso indica su nivel recomendado para que puedas elegir el más adecuado para ti.",
   },
 ];
 
