@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
@@ -8,40 +8,35 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { homeFor } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { role, loading: authLoading, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingNav, setPendingNav] = useState(false);
+
+  // Navega cuando el role esté disponible en el contexto
+  useEffect(() => {
+    if (pendingNav && !authLoading && role) {
+      navigate(homeFor(role), { replace: true });
+    }
+  }, [pendingNav, authLoading, role]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
     const { error: err } = await signIn(email, password);
+    setLoading(false);
     if (err) {
       setError("Email o contraseña incorrectos.");
-      setLoading(false);
       return;
     }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-      navigate(homeFor((profile?.role as any) ?? "student"));
-    } else {
-      navigate("/");
-    }
-    setLoading(false);
+    // Activa la espera: el useEffect navegará cuando role esté listo
+    setPendingNav(true);
   };
 
   return (
