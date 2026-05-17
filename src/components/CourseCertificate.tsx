@@ -2,8 +2,6 @@ import { Document, Page, Text, View, StyleSheet, pdf, Font } from "@react-pdf/re
 
 const base = window.location.origin;
 
-Font.clear();
-
 Font.register({
   family: "Playfair",
   fonts: [
