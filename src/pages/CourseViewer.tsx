@@ -6,15 +6,17 @@ import { fetchCourse, fetchLessonProgress, toggleLessonComplete } from "@/lib/co
 import type { Course } from "@/data/mockData";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { Check, Play, Clock } from "lucide-react";
+import { Check, Play, Clock, Award } from "lucide-react";
+import { downloadCertificate } from "@/components/CourseCertificate";
 
 const CourseViewerInner = () => {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string>("");
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -46,6 +48,19 @@ const CourseViewerInner = () => {
 
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const active = allLessons.find((l) => l.id === activeId) ?? allLessons[0];
+  const isComplete = allLessons.length > 0 && allLessons.every((l) => completed.has(l.id));
+
+  const handleDownloadCertificate = async () => {
+    if (!profile) return;
+    setDownloading(true);
+    await downloadCertificate({
+      studentName: profile.full_name ?? profile.email ?? "Estudiante",
+      courseTitle: course.title,
+      instructorName: course.instructor,
+      completionDate: new Date(),
+    });
+    setDownloading(false);
+  };
 
   const toggle = async (lid: string) => {
     const nowCompleted = !completed.has(lid);
@@ -100,6 +115,31 @@ const CourseViewerInner = () => {
               </button>
             )}
           </div>
+          {isComplete && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-amber-100">
+                    <Award className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold font-sans text-amber-900">¡Curso completado!</h3>
+                    <p className="mt-0.5 text-sm text-amber-700">
+                      Has superado todas las lecciones. Tu certificado está listo para descargar.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDownloadCertificate}
+                  disabled={downloading}
+                  className="inline-flex items-center gap-2 rounded-full border border-amber-400 bg-amber-400 px-5 py-2.5 text-sm font-semibold font-sans text-amber-950 transition-all hover:bg-amber-500 hover:border-amber-500 disabled:opacity-60 shrink-0"
+                >
+                  <Award className="h-4 w-4" />
+                  {downloading ? "Generando..." : "Descargar certificado"}
+                </button>
+              </div>
+            </div>
+          )}
         </main>
 
         <aside className="rounded-2xl border border-border bg-card p-4">
