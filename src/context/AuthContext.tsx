@@ -19,16 +19,27 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const log = (...args: unknown[]) => console.log("[Auth]", ...args);
 
 async function fetchProfileById(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single();
-  if (error) {
-    log("fetchProfile error:", error.message);
+  log("fetchProfile start for", userId);
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("fetchProfile timeout (10s)")), 10000)
+    );
+    const queryPromise = supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>;
+    if (error) {
+      log("fetchProfile error:", error.message);
+      return null;
+    }
+    log("fetchProfile success, role:", (data as Profile)?.role);
+    return data as Profile;
+  } catch (e) {
+    log("fetchProfile exception:", e);
     return null;
   }
-  return data as Profile;
 }
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -76,21 +87,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    log("signIn called for", email);
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error || !data.user) {
+    try {
+      const authTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("signInWithPassword timeout (15s)")), 15000)
+      );
+      const authPromise = supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = (await Promise.race([authPromise, authTimeout])) as Awaited<typeof authPromise>;
+      if (error || !data.user) {
+        setLoading(false);
+        log("signIn failed:", error?.message);
+        return { error: error?.message ?? "Error desconocido", role: null };
+      }
+      log("signInWithPassword OK, user:", data.user.email);
+      const p = await fetchProfileById(data.user.id);
+      setUser(data.user);
+      setProfile(p);
       setLoading(false);
-      log("signIn failed:", error?.message);
-      return { error: error?.message ?? "Error desconocido", role: null };
+      const role = (p?.role as Role) ?? null;
+      log("signIn complete, role:", role);
+      return { error: null, role };
+    } catch (e) {
+      setLoading(false);
+      const msg = e instanceof Error ? e.message : String(e);
+      log("signIn exception:", msg);
+      return { error: msg, role: null };
     }
-    // Carga el perfil sincronamente y actualiza el estado antes de devolver
-    const p = await fetchProfileById(data.user.id);
-    setUser(data.user);
-    setProfile(p);
-    setLoading(false);
-    const role = (p?.role as Role) ?? null;
-    log("signIn success, role:", role);
-    return { error: null, role };
   };
 
   const signOut = async () => {
