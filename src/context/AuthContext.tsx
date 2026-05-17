@@ -8,7 +8,7 @@ type AuthContextValue = {
   profile: Profile | null;
   role: Role | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null; role: Role | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   updateProfile: (patch: Partial<Pick<Profile, "full_name" | "bio" | "avatar_url">>) => Promise<{ error: string | null }>;
   refreshProfile: () => Promise<void>;
@@ -20,26 +20,17 @@ const log = (...args: unknown[]) => console.log("[Auth]", ...args);
 
 async function fetchProfileById(userId: string): Promise<Profile | null> {
   log("fetchProfile start for", userId);
-  try {
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("fetchProfile timeout (10s)")), 10000)
-    );
-    const queryPromise = supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>;
-    if (error) {
-      log("fetchProfile error:", error.message);
-      return null;
-    }
-    log("fetchProfile success, role:", (data as Profile)?.role);
-    return data as Profile;
-  } catch (e) {
-    log("fetchProfile exception:", e);
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+  if (error) {
+    log("fetchProfile error:", error.message);
     return null;
   }
+  log("fetchProfile success, role:", (data as Profile)?.role);
+  return data as Profile;
 }
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -50,30 +41,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let cancelled = false;
 
+    // Carga inicial: getSession + fetch profile
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return;
       log("initial getSession:", session?.user?.email ?? "no session");
-      setUser(session?.user ?? null);
       if (session?.user) {
+        setUser(session.user);
         const p = await fetchProfileById(session.user.id);
         if (!cancelled) setProfile(p);
       }
       if (!cancelled) setLoading(false);
     });
 
+    // CRÍTICO: el callback NO debe ser async ni hacer await directamente.
+    // Supabase JS mantiene un lock interno mientras el callback se ejecuta,
+    // y las queries a la DB se cuelgan si se hace await aquí.
+    // Solución: diferir el trabajo asíncrono con setTimeout(0).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         log("onAuthStateChange:", event, session?.user?.email ?? "no user");
-        setUser(session?.user ?? null);
         if (session?.user) {
-          // Solo recarga el perfil si no lo tenemos aún o cambia el usuario
-          try {
-            const p = await fetchProfileById(session.user.id);
-            setProfile(p);
-          } finally {
-            setLoading(false);
-          }
+          setUser(session.user);
+          const uid = session.user.id;
+          setTimeout(() => {
+            if (cancelled) return;
+            fetchProfileById(uid).then((p) => {
+              if (cancelled) return;
+              setProfile(p);
+              setLoading(false);
+            });
+          }, 0);
         } else {
+          setUser(null);
           setProfile(null);
           setLoading(false);
         }
@@ -88,32 +87,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     log("signIn called for", email);
-    setLoading(true);
-    try {
-      const authTimeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("signInWithPassword timeout (15s)")), 15000)
-      );
-      const authPromise = supabase.auth.signInWithPassword({ email, password });
-      const { data, error } = (await Promise.race([authPromise, authTimeout])) as Awaited<typeof authPromise>;
-      if (error || !data.user) {
-        setLoading(false);
-        log("signIn failed:", error?.message);
-        return { error: error?.message ?? "Error desconocido", role: null };
-      }
-      log("signInWithPassword OK, user:", data.user.email);
-      const p = await fetchProfileById(data.user.id);
-      setUser(data.user);
-      setProfile(p);
-      setLoading(false);
-      const role = (p?.role as Role) ?? null;
-      log("signIn complete, role:", role);
-      return { error: null, role };
-    } catch (e) {
-      setLoading(false);
-      const msg = e instanceof Error ? e.message : String(e);
-      log("signIn exception:", msg);
-      return { error: msg, role: null };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) {
+      log("signIn failed:", error?.message);
+      return { error: error?.message ?? "Error desconocido" };
     }
+    log("signInWithPassword OK, user:", data.user.email);
+    // El perfil se cargará automáticamente vía onAuthStateChange.
+    return { error: null };
   };
 
   const signOut = async () => {

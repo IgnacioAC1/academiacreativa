@@ -17,7 +17,8 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Si el usuario ya está logueado al entrar a /login, redirige a su panel
+  // Cuando el role esté disponible en el contexto, navega al panel correspondiente.
+  // Esto cubre tanto el caso de "ya estaba logueado" como "acaba de hacer login".
   useEffect(() => {
     if (!authLoading && role) {
       navigate(homeFor(role), { replace: true });
@@ -28,18 +29,14 @@ const Login = () => {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    const { error: err, role: userRole } = await signIn(email, password);
+    const { error: err } = await signIn(email, password);
     setSubmitting(false);
     if (err) {
       setError("Email o contraseña incorrectos.");
       return;
     }
-    if (userRole) {
-      navigate(homeFor(userRole), { replace: true });
-    } else {
-      // Sin role: redirige a home (no se debería dar si el perfil existe)
-      setError("No se pudo cargar el perfil. Contacta con un administrador.");
-    }
+    // La navegación ocurre automáticamente cuando el AuthContext
+    // cargue el perfil vía onAuthStateChange (ver useEffect arriba).
   };
 
   return (
