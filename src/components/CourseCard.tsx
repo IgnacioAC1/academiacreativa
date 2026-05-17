@@ -25,7 +25,7 @@ const CourseCard = ({ course, hidePrice = false }: { course: Course; hidePrice?:
       <div className="flex items-baseline justify-between pt-2">
         {!hidePrice && (
           <span className="text-lg font-semibold text-foreground">
-            {course.price === 97 ? "​" : `${course.price} €`}
+            {course.price === 0 ? "Gratis" : `${course.price} €`}
           </span>
         )}
         <span className="ml-auto text-sm font-medium font-sans text-primary opacity-0 transition-smooth group-hover:opacity-100">
