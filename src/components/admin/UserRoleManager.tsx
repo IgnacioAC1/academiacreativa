@@ -10,8 +10,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Users, Shield, GraduationCap, Palette } from "lucide-react";
+import { Users, Shield, GraduationCap, Palette, Trash2 } from "lucide-react";
 import type { Role } from "@/lib/auth";
 
 type UserRow = {
@@ -34,6 +44,7 @@ const UserRoleManager = () => {
   const [submitting, setSubmitting] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
 
   const loadUsers = async () => {
     setLoadingUsers(true);
@@ -66,6 +77,18 @@ const UserRoleManager = () => {
       loadUsers();
     }
     setSubmitting(false);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.rpc("delete_user", { target_user_id: deleteTarget.id });
+    if (error) {
+      toast.error("Error al eliminar el usuario");
+    } else {
+      toast.success(`Usuario "${deleteTarget.full_name ?? deleteTarget.email}" eliminado`);
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+    }
+    setDeleteTarget(null);
   };
 
   return (
@@ -132,6 +155,7 @@ const UserRoleManager = () => {
                   <th className="px-5 py-3 font-medium font-sans">Usuario</th>
                   <th className="hidden px-5 py-3 font-medium font-sans md:table-cell">Email</th>
                   <th className="px-5 py-3 font-medium font-sans">Rol</th>
+                  <th className="px-5 py-3 font-medium font-sans text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border text-sm">
@@ -152,6 +176,16 @@ const UserRoleManager = () => {
                           {r.label}
                         </span>
                       </td>
+                      <td className="px-5 py-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setDeleteTarget(u)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -160,6 +194,30 @@ const UserRoleManager = () => {
           )}
         </div>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-sans">¿Eliminar usuario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a eliminar permanentemente la cuenta de{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.full_name ?? deleteTarget?.email ?? "este usuario"}
+              </span>
+              . Esta acción no se puede deshacer y el usuario perderá acceso a todos sus cursos y datos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteConfirm}
+            >
+              Eliminar usuario
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 };
