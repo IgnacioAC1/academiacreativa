@@ -15,13 +15,13 @@ import {
 } from "@/components/ui/select";
 import type { Course } from "@/data/mockData";
 import { fetchCourse, saveCourse, updateCoursePublished } from "@/lib/courseApi";
+import { fetchCategories, type Category } from "@/lib/categoryApi";
 import { uploadImage, courseImagePath } from "@/lib/storage";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { toast } from "sonner";
 import { Plus, Trash2, Upload } from "lucide-react";
 
-const CATEGORIES = ["Branding", "Ilustración", "Motion", "Diseño", "Producto", "Fotografía"];
 
 type Props = { scope: "admin" | "instructor" };
 
@@ -30,8 +30,11 @@ const CourseEditorInner = ({ scope }: Props) => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => { fetchCategories().then(setCategories); }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -185,8 +188,8 @@ const CourseEditorInner = ({ scope }: Props) => {
               <Select value={course.category} onValueChange={(v) => update({ category: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

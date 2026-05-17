@@ -12,6 +12,7 @@ import AdminDashboard from "@/components/AdminDashboard";
 import EventsManager from "@/components/EventsManager";
 import UserRoleManager from "@/components/admin/UserRoleManager";
 import EventLeadsManager from "@/components/admin/EventLeadsManager";
+import CategoryManager from "@/components/admin/CategoryManager";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 type Props = { scope: "admin" | "instructor" };
@@ -168,6 +169,7 @@ const CoursesAdminListInner = ({ scope }: Props) => {
           <>
             <EventsManager />
             <EventLeadsManager />
+            <CategoryManager />
             <UserRoleManager />
           </>
         )}
