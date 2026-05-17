@@ -138,7 +138,7 @@ const CoursesAdminListInner = ({ scope }: Props) => {
                     <td className="px-5 py-3">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => togglePublish(c.id, c.published)}>
-                          {c.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {c.published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                         </Button>
                         <Button asChild variant="ghost" size="sm">
                           <Link to={`${editPath}/${c.id}`}>
