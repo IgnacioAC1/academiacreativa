@@ -39,3 +39,55 @@ export async function fetchEvent(id: string): Promise<Event | null> {
     host: (data.host as string) ?? "",
   };
 }
+
+export async function getUserReservation(
+  eventId: string,
+  userId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("event_reservations")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("student_id", userId)
+    .maybeSingle();
+  return !!data;
+}
+
+export async function reserveEvent(
+  eventId: string,
+  userId: string
+): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from("event_reservations")
+    .insert({ event_id: eventId, student_id: userId });
+  if (error) {
+    if (error.code === "23505") return { error: "ya_reservado" };
+    return { error: error.message };
+  }
+  return { error: null };
+}
+
+export type LeadData = {
+  eventId: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  acceptsMarketing: boolean;
+};
+
+export async function createEventLead(
+  lead: LeadData
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.from("event_leads").insert({
+    event_id: lead.eventId,
+    full_name: lead.fullName,
+    email: lead.email,
+    phone: lead.phone || null,
+    accepts_marketing: lead.acceptsMarketing,
+  });
+  if (error) {
+    if (error.code === "23505") return { error: "ya_registrado" };
+    return { error: error.message };
+  }
+  return { error: null };
+}

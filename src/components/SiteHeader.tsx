@@ -32,7 +32,11 @@ const SiteHeader = () => {
           <NavLink
             to="/courses"
             className={({ isActive }) =>
-              `font-medium font-sans transition-smooth text-base ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`
+              `inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-semibold font-sans transition-all duration-200 ${
+                isActive
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary hover:shadow-sm"
+              }`
             }
           >
             Cursos

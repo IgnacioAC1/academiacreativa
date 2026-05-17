@@ -89,6 +89,7 @@ const EventPage = () => {
 
           <div className="pt-4">
             <EventReservationDialog
+              eventId={event.id}
               eventTitle={event.title}
               trigger={<Button size="lg" className="rounded-full px-7">Reservar plaza</Button>}
             />
