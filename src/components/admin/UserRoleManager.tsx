@@ -48,8 +48,12 @@ const UserRoleManager = () => {
 
   const loadUsers = async () => {
     setLoadingUsers(true);
+    const roleOrder: Record<Role, number> = { admin: 0, instructor: 1, student: 2 };
     const { data, error } = await supabase.rpc("get_users_with_roles");
-    if (!error && data) setUsers(data as UserRow[]);
+    if (!error && data) {
+      const sorted = (data as UserRow[]).sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
+      setUsers(sorted);
+    }
     setLoadingUsers(false);
   };
 
