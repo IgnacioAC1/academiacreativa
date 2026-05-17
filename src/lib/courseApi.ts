@@ -192,6 +192,16 @@ export async function enrollStudent(studentId: string, courseId: string): Promis
   return { error: error ? error.message : null };
 }
 
+export async function isEnrolled(studentId: string, courseId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("enrollments")
+    .select("id")
+    .eq("student_id", studentId)
+    .eq("course_id", courseId)
+    .maybeSingle();
+  return !!data;
+}
+
 export async function fetchEnrollments(studentId: string): Promise<{ courseId: string; progress: number }[]> {
   const { data: enrollments } = await supabase
     .from("enrollments")

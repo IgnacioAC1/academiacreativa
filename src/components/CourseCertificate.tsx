@@ -5,17 +5,17 @@ const base = window.location.origin;
 Font.register({
   family: "Playfair",
   fonts: [
-    { src: `${base}/fonts/playfair-400.woff2`, fontWeight: 400 },
-    { src: `${base}/fonts/playfair-700.woff2`, fontWeight: 700 },
-    { src: `${base}/fonts/playfair-400-italic.woff2`, fontWeight: 400, fontStyle: "italic" },
+    { src: `${base}/fonts/playfair-400.woff`, fontWeight: 400 },
+    { src: `${base}/fonts/playfair-700.woff`, fontWeight: 700 },
+    { src: `${base}/fonts/playfair-400-italic.woff`, fontWeight: 400, fontStyle: "italic" },
   ],
 });
 
 Font.register({
   family: "Lato",
   fonts: [
-    { src: `${base}/fonts/lato-300.woff2`, fontWeight: 300 },
-    { src: `${base}/fonts/lato-400.woff2`, fontWeight: 400 },
+    { src: `${base}/fonts/lato-300.woff`, fontWeight: 300 },
+    { src: `${base}/fonts/lato-400.woff`, fontWeight: 400 },
   ],
 });
 

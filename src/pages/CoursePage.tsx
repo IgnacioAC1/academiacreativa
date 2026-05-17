@@ -4,10 +4,10 @@ import SiteHeader from "@/components/SiteHeader";
 import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { fetchCourse, enrollStudent } from "@/lib/courseApi";
+import { fetchCourse, enrollStudent, isEnrolled } from "@/lib/courseApi";
 import type { Course } from "@/data/mockData";
 import { toast } from "sonner";
-import { PlayCircle, Clock, BookOpen } from "lucide-react";
+import { PlayCircle, Clock, BookOpen, CheckCircle2 } from "lucide-react";
 
 const CoursePage = () => {
   const { id } = useParams();
@@ -16,14 +16,21 @@ const CoursePage = () => {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
+  const [enrolled, setEnrolled] = useState(false);
 
   useEffect(() => {
     if (!id) return;
-    fetchCourse(id).then((c) => {
+    const load = async () => {
+      const c = await fetchCourse(id);
       setCourse(c);
+      if (c && user) {
+        const already = await isEnrolled(user.id, c.id);
+        setEnrolled(already);
+      }
       setLoading(false);
-    });
-  }, [id]);
+    };
+    load();
+  }, [id, user]);
 
   if (loading) {
     return (
@@ -37,6 +44,26 @@ const CoursePage = () => {
   }
 
   if (!course) return <div className="container py-20">Curso no encontrado.</div>;
+
+  // Ocultar borradores a quienes no son el instructor ni admin
+  const canSeeDraft = role === "admin" || (role === "instructor" && user?.id === course.instructorId);
+  if (!course.published && !canSeeDraft) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <div className="container flex flex-col items-center justify-center py-40 text-center">
+          <div className="mb-4 text-5xl">🔒</div>
+          <h1 className="mb-2 text-2xl font-semibold font-sans">Curso temporalmente no disponible</h1>
+          <p className="mb-6 max-w-md text-muted-foreground">
+            Este curso está actualmente despublicado. Si crees que es un error, ponte en contacto con el equipo de Academia Creativa.
+          </p>
+          <Button asChild className="rounded-full">
+            <Link to="/courses">Ver otros cursos</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const totalLessons = course.modules.reduce((s, m) => s + m.lessons.length, 0);
 
@@ -98,11 +125,27 @@ const CoursePage = () => {
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
-            <div className="mb-1 text-sm text-muted-foreground">Acceso de por vida</div>
-            <div className="mb-6 text-4xl font-semibold font-sans">{course.price} €</div>
-            <Button onClick={buy} size="lg" className="w-full rounded-full" disabled={buying}>
-              {buying ? "Procesando..." : "Comprar curso"}
-            </Button>
+            {enrolled ? (
+              <>
+                <div className="mb-4 flex items-center gap-2 rounded-lg bg-accent/15 px-3 py-2 text-sm text-accent">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="font-medium font-sans">Ya estás matriculado</span>
+                </div>
+                <Button asChild size="lg" className="w-full rounded-full">
+                  <Link to={`/learn/${course.id}`}>Continuar curso</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="mb-1 text-sm text-muted-foreground">Acceso de por vida</div>
+                <div className="mb-6 text-4xl font-semibold font-sans">
+                  {course.price === 0 ? "Gratis" : `${course.price} €`}
+                </div>
+                <Button onClick={buy} size="lg" className="w-full rounded-full" disabled={buying}>
+                  {buying ? "Procesando..." : "Comprar curso"}
+                </Button>
+              </>
+            )}
             <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> {course.modules.length} módulos · {totalLessons} lecciones</li>
               <li className="flex items-center gap-2"><Clock className="h-4 w-4" /> Avanza a tu ritmo</li>
