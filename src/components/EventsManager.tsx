@@ -280,7 +280,7 @@ const EventsManager = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="ev-host">Host</Label>
+                  <Label htmlFor="ev-host">Ponente</Label>
                   <Input
                     id="ev-host"
                     value={editing.host ?? ""}
