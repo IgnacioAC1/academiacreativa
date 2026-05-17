@@ -70,7 +70,7 @@ const CourseEditorInner = ({ scope }: Props) => {
               ...m,
               lessons: [
                 ...m.lessons,
-                { id: `${mid}-l${m.lessons.length}-${Date.now()}`, title: "Nueva lección", duration: "5:00" },
+                { id: crypto.randomUUID(), title: "Nueva lección", duration: "5:00" },
               ],
             }
           : m
