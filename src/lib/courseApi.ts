@@ -187,7 +187,8 @@ export async function saveCourse(course: Course): Promise<{ error: string | null
 export async function enrollStudent(studentId: string, courseId: string): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from("enrollments")
-    .upsert({ student_id: studentId, course_id: courseId }, { onConflict: "student_id,course_id" });
+    .insert({ student_id: studentId, course_id: courseId });
+  if (error && error.code === "23505") return { error: null }; // ya matriculado, ignorar
   return { error: error ? error.message : null };
 }
 
